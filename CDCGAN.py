@@ -191,3 +191,12 @@ def write_from_label(netG, label, n_images=10, size=64):
 
 label = [0, 0, 0, 0, 0, 10, 0, 0, 0, 0]
 write_from_label(netG, label)
+# %%
+label = [0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0]
+write_from_label(netG, label)
+# %%
+label = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+write_from_label(netG, label)
+# %%
+label = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+write_from_label(netG, label)
