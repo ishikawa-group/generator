@@ -5,7 +5,7 @@
 # Step 4. Put above dataset and train the CGAN.
 # Step 5. Generate fake-samples for "rank=1" surfaces, to generate the surfaces with stronger adsorption energy.
 
-from conditional_gan.get_adsorption_energy import get_adsorption_energy
+from conditional_gan.get_reaction_energy import get_reaction_energy
 
 num_samples = 4
 e_ads = []
@@ -19,7 +19,7 @@ for i in range(num_samples):
     surf = fcc111("Ni", size=(3, 3, 4), vacuum=10.0)
     # add some random replacement of surface atoms
 
-    e_ad = get_adsorption_energy(surface=surf)  # function to be implemented
+    e_ad = get_reaction_energy(surface=surf)  # function to be implemented
     atomic_numbers.append(surf.get_atomic_numbers())  # get element information for surface
 
     print(f"Adsorption energy of sample {i+1}: {np.random.normal(0, 1)}")

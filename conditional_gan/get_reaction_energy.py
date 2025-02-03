@@ -1,11 +1,12 @@
-def get_adsorption_energy(surface=None):
+def get_reaction_energy(surface=None):
     """
-    Calculate the adsorption energy of N2 on Ru(0001) surface using M3GNet or CHGNet.
+    Calculate the reaction energy of N2 dissociative adsorption on surface (N2 + 2*surf -> 2N*).
+    M3GNet or CHGNet can be used.
 
     Args:
-        surface: Atoms
-    Return:
-        float: adsorption energy
+        surface: ASE Atoms object of surface.
+    Returns:
+        reaction energy: Reaction energy in eV.
     """
     import warnings
     import matgl
@@ -64,8 +65,8 @@ def get_adsorption_energy(surface=None):
     e_bare_surf = bare_surf.get_potential_energy()
     e_surf = surf.get_potential_energy()
 
-    e_ads = e_surf - (0.5*e_mol + e_bare_surf)
+    e_reac = 2.0*e_surf - (e_mol + 2.0*e_bare_surf)
 
-    print(f"Adsorption energy = {e_ads} eV")
+    print(f"Reaction energy of N2 + 2surf -> 2N* :{e_reac} eV")
 
-    return e_ads
+    return e_reac
