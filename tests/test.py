@@ -7,6 +7,9 @@
 # Step 4. Put above dataset and train the CGAN.
 # Step 5. Generate fake-samples for "rank=1" surfaces, to generate the surfaces with lower activation energy.
 
+import sys
+sys.path.append("../")
+
 import torch
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
