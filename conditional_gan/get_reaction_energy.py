@@ -14,6 +14,7 @@ def get_reaction_energy(surface=None):
     from ase.build import add_adsorbate
     from ase.visualize import view
     from ase.optimize import BFGS
+    from ase.calculators.emt import EMT
     from ase.constraints import FixAtoms
     from matgl.ext.ase import PESCalculator
     from chgnet.model.dynamics import CHGNetCalculator
@@ -22,7 +23,7 @@ def get_reaction_energy(surface=None):
 
     warnings.simplefilter("ignore")
 
-    method = "chgnet"
+    method = "emt"  # emt, m3gnet, or chgnet
 
     surf = surface.copy()
     bare_surf = surface.copy()
@@ -41,7 +42,12 @@ def get_reaction_energy(surface=None):
     bare_surf.constraints = c_bare
     surf.constraints = c_surf
 
-    if method == "m3gnet":
+    # --- set calculators
+    if method == "emt":
+        mol.calc = EMT()
+        bare_surf.calc = EMT()
+        surf.calc = EMT()
+    elif method == "m3gnet":
         potential = matgl.load_model("M3GNet-MP-2021.2.8-PES")
         mol.calc = PESCalculator(potential=potential)
         bare_surf.calc = PESCalculator(potential=potential)

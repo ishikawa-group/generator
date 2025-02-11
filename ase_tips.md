@@ -1,3 +1,4 @@
+```python
 from ase.build import fcc111
 import numpy as np
 
@@ -23,3 +24,4 @@ print("Cell:\n", cell)
 # 表面の情報を取得
 info = surf.info
 print("Info:\n", info)
+```
