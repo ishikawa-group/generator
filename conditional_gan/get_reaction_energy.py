@@ -1,4 +1,4 @@
-def get_reaction_energy(surface=None):
+def get_reaction_energy(surface=None, steps=10, reaction_type="N2dissociation"):
     """
     Calculate the reaction energy of N2 dissociative adsorption on surface (N2 + 2*surf -> 2N*).
     M3GNet or CHGNet can be used.
@@ -12,14 +12,13 @@ def get_reaction_energy(surface=None):
     import matgl
     from ase import Atom, Atoms
     from ase.build import add_adsorbate
-    from ase.visualize import view
-    from ase.optimize import BFGS
+    # from ase.visualize import view
+    from ase.optimize import BFGS, FIRE, FIRE2
     from ase.calculators.emt import EMT
     from ase.constraints import FixAtoms
     from matgl.ext.ase import PESCalculator
     from chgnet.model.dynamics import CHGNetCalculator
     from chgnet.model.model import CHGNet
-    from pymatgen.io.ase import AseAtomsAdaptor
 
     warnings.simplefilter("ignore")
 
@@ -28,9 +27,14 @@ def get_reaction_energy(surface=None):
     surf = surface.copy()
     bare_surf = surface.copy()
 
-    mol = Atoms("N2", positions=[(0, 0, 0), (0, 0, 1.1)], cell=[10, 10, 10])
-
-    add_adsorbate(surf, Atom("N"), offset=(0.66, 0.66), height=1.4)
+    if reaction_type == "N2dissociation":
+        mol = Atoms("N2", positions=[(0, 0, 0), (0, 0, 1.1)], cell=[10, 10, 10])
+        add_adsorbate(surf, Atom("N"), offset=(0.66, 0.66), height=1.4)
+    elif reaction_type == "O2dissociation":
+        mol = Atoms("O2", positions=[(0, 0, 0), (0, 0, 1.1)], cell=[10, 10, 10])
+        add_adsorbate(surf, Atom("O"), offset=(0.66, 0.66), height=1.4)
+    else:
+        raise ValueError("Invalid reaction type.")
 
     surf.pbc = True
     mol.pbc = True
@@ -60,12 +64,13 @@ def get_reaction_energy(surface=None):
         surf.calc = potential
 
     # --- optimization
-    opt_mol = BFGS(mol, trajectory="mol.traj")
-    opt_mol.run(fmax=0.1, steps=100)
+    opt_mol  = BFGS(mol, trajectory="mol.traj")
     opt_bare = BFGS(bare_surf, trajectory="bare_surf.traj")
-    opt_bare.run(fmax=0.1, steps=100)
     opt_surf = BFGS(surf, trajectory="surf.traj")
-    opt_surf.run(fmax=0.1, steps=100)
+
+    opt_mol.run(fmax=0.1, steps=steps)
+    opt_bare.run(fmax=0.1, steps=steps)
+    opt_surf.run(fmax=0.1, steps=steps)
 
     e_mol = mol.get_potential_energy()
     e_bare_surf = bare_surf.get_potential_energy()
@@ -73,6 +78,11 @@ def get_reaction_energy(surface=None):
 
     e_reac = 2.0*e_surf - (e_mol + 2.0*e_bare_surf)
 
-    print(f"Reaction energy of N2 + 2surf -> 2N* :{e_reac} eV")
+    if reaction_type == "N2dissociation":
+        print(f"Reaction energy of N2 + 2surf -> 2N* :{e_reac} eV")
+    elif reaction_type == "O2dissociation":
+        print(f"Reaction energy of O2 + 2surf -> 2O* :{e_reac} eV")
+    else:
+        raise ValueError("Invalid reaction type.")
 
     return e_reac
