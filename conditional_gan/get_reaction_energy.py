@@ -1,10 +1,16 @@
-def get_reaction_energy(surface=None, steps=10, reaction_type="N2dissociation"):
+from uncertainties.umath_core import non_std_wrapped_funcs
+
+
+def get_reaction_energy(surface=None, method="emt", steps=10, reaction_type="N2dissociation"):
     """
     Calculate the reaction energy of N2 dissociative adsorption on surface (N2 + 2*surf -> 2N*).
     M3GNet or CHGNet can be used.
 
     Args:
         surface: ASE Atoms object of surface.
+        method: Method for potential energy calculation. "emt", "m3gnet", or "chgnet".
+        steps: Number of optimization steps.
+        reaction_type: Type of reaction. "N2dissociation" or "O2dissociation".
     Returns:
         reaction energy: Reaction energy in eV.
     """
@@ -15,14 +21,13 @@ def get_reaction_energy(surface=None, steps=10, reaction_type="N2dissociation"):
     # from ase.visualize import view
     from ase.optimize import BFGS, FIRE, FIRE2
     from ase.calculators.emt import EMT
+    from ase.calculators.vasp import Vasp
     from ase.constraints import FixAtoms
     from matgl.ext.ase import PESCalculator
     from chgnet.model.dynamics import CHGNetCalculator
     from chgnet.model.model import CHGNet
 
     warnings.simplefilter("ignore")
-
-    method = "emt"  # emt, m3gnet, or chgnet
 
     surf = surface.copy()
     bare_surf = surface.copy()
@@ -62,15 +67,25 @@ def get_reaction_energy(surface=None, steps=10, reaction_type="N2dissociation"):
         mol.calc = potential
         bare_surf.calc = potential
         surf.calc = potential
+    elif method == "vasp":
+        calc_mol  = Vasp(prec="Normal", ismear=0, sigma=0.05, xc="PBE", kpts=(1, 1, 1), ibrion=2, potim=0.1, nsw=0)
+        calc_surf = Vasp(prec="Normal", ismear=1, sigma=0.05, xc="PBE", kpts=(1, 1, 1), ibrion=2, potim=0.1, nsw=0)
+
+        mol.calc = calc_mol
+        bare_surf.calc = calc_surf
+        surf.calc = calc_surf
+    else:
+        raise ValueError("Invalid method.")
 
     # --- optimization
-    opt_mol  = BFGS(mol, trajectory="mol.traj")
-    opt_bare = BFGS(bare_surf, trajectory="bare_surf.traj")
-    opt_surf = BFGS(surf, trajectory="surf.traj")
+    if method != "vasp":
+        opt_mol  = BFGS(mol, trajectory="mol.traj")
+        opt_bare = BFGS(bare_surf, trajectory="bare_surf.traj")
+        opt_surf = BFGS(surf, trajectory="surf.traj")
 
-    opt_mol.run(fmax=0.1, steps=steps)
-    opt_bare.run(fmax=0.1, steps=steps)
-    opt_surf.run(fmax=0.1, steps=steps)
+        opt_mol.run(fmax=0.1, steps=steps)
+        opt_bare.run(fmax=0.1, steps=steps)
+        opt_surf.run(fmax=0.1, steps=steps)
 
     e_mol = mol.get_potential_energy()
     e_bare_surf = bare_surf.get_potential_energy()

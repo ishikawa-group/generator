@@ -31,17 +31,20 @@ dropoutrate = 0.4  # default: 0.5
 negative_slope = 0.01  # default: 0.01
 rank_to_generate = 0
 n_generate = 10
-num_samples = 100
-ratio = [0.5, 0.5]
-num_steps_dft = 100
-num_iteration = 3
+num_samples = 40
+ratio = [0.9, 0.1]
 
+num_steps_dft = 50
+num_iteration = 3
+latticeconstant = 3.52   # nickel
+
+method = "m3gnet"  # emt or m3gnet or chgnet
 reaction_type = "N2dissociation"  # "N2dissociation" or "O2dissociation"
 
 # Approximate the activation energies by linear relationship (alpha*reaction_energy + beta).
 # Here alpha and beta are parameters.
 alpha = 0.9
-beta = 1.2
+beta = 2.5
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -293,11 +296,11 @@ if __name__ == "__main__":
     formula_list = []
 
     for isurf in range(num_samples):
-        surf = fcc111("Au", size=SURF_SIZE, a=3.8, vacuum=VACUUM)  # element is dummy
+        surf = fcc111("Au", size=SURF_SIZE, a=latticeconstant, vacuum=VACUUM)  # element is dummy
         surf.pbc = True
         symbols = np.random.choice(possible_elements, len(surf), p=ratio)
         surf.set_chemical_symbols(symbols)
-        e_rxn = get_reaction_energy(surface=surf, steps=num_steps_dft, reaction_type=reaction_type)
+        e_rxn = get_reaction_energy(surface=surf, method=method, steps=num_steps_dft, reaction_type=reaction_type)
         print(f"Reaction energy of sample {isurf + 1}: {e_rxn:.3f}")
         atomic_numbers.append(surf.get_atomic_numbers())
         formula_list.append(surf.get_chemical_formula())
@@ -322,10 +325,10 @@ if __name__ == "__main__":
         atomic_numbers = []
         formula_list = []
         for isurf in generated:
-            surf = fcc111("Au", size=SURF_SIZE, vacuum=VACUUM)  # element is dummy
+            surf = fcc111("Au", size=SURF_SIZE, a=latticeconstant, vacuum=VACUUM)  # element is dummy
             surf.pbc = True
             surf.set_chemical_symbols(isurf)
-            e_rxn = get_reaction_energy(surface=surf, steps=num_steps_dft, reaction_type=reaction_type)
+            e_rxn = get_reaction_energy(surface=surf, method=method, steps=num_steps_dft, reaction_type=reaction_type)
             atomic_numbers.append(surf.get_atomic_numbers())
             formula_list.append(surf.get_chemical_formula())
             e_rxns.append(e_rxn)
