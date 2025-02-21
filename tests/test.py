@@ -15,9 +15,13 @@ from ase.build import fcc111
 from conditional_gan.get_reaction_energy import get_reaction_energy
 import pandas as pd
 
-ATOMIC_NUMBERS = {"Ni": 28, "Pd": 46}
+ATOMIC_NUMBERS = {"Ni": 28, "Ru": 44, "Rh": 45, "Pd": 46, "Pt": 78, "Au": 79}
+LATTICE_CONSTANTS = {"Ni": 3.52, "Ru": 2.71, "Rh": 3.80, "Pd": 3.89, "Pt": 3.92, "Au": 4.08}
 VACUUM = 9.0
 SURF_SIZE = (3, 3, 4)
+
+possible_elements = ["Pt", "Rh"]
+# possible_elements = ["Pt", "Pd"]
 
 np.set_printoptions(precision=3, suppress=True)
 
@@ -31,20 +35,20 @@ dropoutrate = 0.4  # default: 0.5
 negative_slope = 0.01  # default: 0.01
 rank_to_generate = 0
 n_generate = 10
-num_samples = 40
-ratio = [0.9, 0.1]
+num_samples = 60
+ratio = [0.7, 0.3]
 
-num_steps_dft = 50
+num_steps_dft = 60
 num_iteration = 3
-latticeconstant = 3.52   # nickel
+latticeconstant = LATTICE_CONSTANTS[possible_elements[0]]*ratio[0] + LATTICE_CONSTANTS[possible_elements[1]]*ratio[1]
 
 method = "m3gnet"  # emt or m3gnet or chgnet
 reaction_type = "N2dissociation"  # "N2dissociation" or "O2dissociation"
 
 # Approximate the activation energies by linear relationship (alpha*reaction_energy + beta).
-# Here alpha and beta are parameters.
-alpha = 0.9
-beta = 2.5
+# Here alpha and beta are parameters, known as "Universal Scaling Relationship".
+alpha = 0.87
+beta = 1.34
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -207,21 +211,24 @@ def generate_samples(netG, rank, n_generate=10, n_classes=0):
     fake_samples[fake_samples >= 0.5] = 1
 
     # 0-1 -> atomic number
-    fake_samples[fake_samples == 0] = ATOMIC_NUMBERS["Ni"]
-    fake_samples[fake_samples == 1] = ATOMIC_NUMBERS["Pd"]
+    fake_samples[fake_samples == 0] = ATOMIC_NUMBERS[possible_elements[0]]
+    fake_samples[fake_samples == 1] = ATOMIC_NUMBERS[possible_elements[1]]
 
     return fake_samples
 
 
 def add_activation_energy_to_dataframe(df, iteration, e_acts, formula_list):
-    # Loop to add values
+    df_tmp = pd.DataFrame(columns=["iteration", "activation_energy", "formula"])
     for i, (e_act, formula) in enumerate(zip(e_acts, formula_list)):
         new_row = pd.DataFrame({
             "iteration": [iteration],
             "activation_energy": [e_act],
             "formula": [formula]
         })
-        df = pd.concat([df, new_row], ignore_index=True)
+        df_tmp = pd.concat([df_tmp, new_row], ignore_index=True)
+
+    df_tmp = df_tmp.sort_values(by="activation_energy", ascending=False)
+    df = pd.concat([df, df_tmp], ignore_index=True)
 
     return df
 
@@ -278,7 +285,6 @@ def train_and_generate(samples=None):
     # Step 5. Generate fake-samples for "rank=1" surfaces, to generate the surfaces with lower activation energy.
     generated = generate_samples(netG, rank_to_generate, n_generate=n_generate, n_classes=n_classes)
     generated = generated.detach().numpy()
-    print(f"Generated samples (rank={rank_to_generate}): {generated}")
 
     return generated
 
@@ -288,8 +294,6 @@ if __name__ == "__main__":
     # Step 1. Prepare the dataset by generating the surface structures and calculating the activation energy.
     #
     datum = []
-
-    possible_elements = ["Ni", "Pd"]
 
     e_rxns = []
     atomic_numbers = []
@@ -301,14 +305,11 @@ if __name__ == "__main__":
         symbols = np.random.choice(possible_elements, len(surf), p=ratio)
         surf.set_chemical_symbols(symbols)
         e_rxn = get_reaction_energy(surface=surf, method=method, steps=num_steps_dft, reaction_type=reaction_type)
-        print(f"Reaction energy of sample {isurf + 1}: {e_rxn:.3f}")
         atomic_numbers.append(surf.get_atomic_numbers())
         formula_list.append(surf.get_chemical_formula())
         e_rxns.append(e_rxn)
 
     e_acts = alpha * np.array(e_rxns) + beta
-
-    print(f"Activation energies (in eV): {e_acts}")
 
     df = pd.DataFrame(columns=["iteration", "activation_energy", "formula"])
     df = add_activation_energy_to_dataframe(df, iteration=0, e_acts=e_acts, formula_list=formula_list)
