@@ -12,7 +12,7 @@ from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 from ase.build import fcc111
-from conditional_gan.get_reaction_energy import get_reaction_energy
+from cgan_generator.get_reaction_energy import get_reaction_energy
 import pandas as pd
 
 ATOMIC_NUMBERS = {"Ni": 28, "Ru": 44, "Rh": 45, "Pd": 46, "Pt": 78, "Au": 79}
@@ -35,7 +35,7 @@ dropoutrate = 0.4  # default: 0.5
 negative_slope = 0.01  # default: 0.01
 rank_to_generate = 0
 n_generate = 10
-num_samples = 60
+num_samples = 10
 ratio = [0.7, 0.3]
 
 num_steps_dft = 60
