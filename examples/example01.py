@@ -1,10 +1,3 @@
-# A script for minimize the activation energy with GAN.
-# Step 1. Prepare the dataset by generating the surface structures and calculating the activation energy.
-# Step 2. Make the descriptor-target pair, by setting atomic numbers as descriptors and activation energy as target.
-# Step 3. Assign the smallest activation energy surfaces as "rank=1".
-# Step 4. Put above dataset and train the CGAN.
-# Step 5. Generate fake-samples for "rank=1" surfaces, to generate the surfaces with lower activation energy.
-
 import sys
 sys.path.append("../")
 import torch
