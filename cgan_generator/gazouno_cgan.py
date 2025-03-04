@@ -12,18 +12,10 @@ noise_std = 0.7
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device
 dataset = MNIST(
-    root="datasets/",
-    train=True,
-    download=True,
-    transform=transforms.ToTensor()
+    root="datasets/", train=True, download=True, transform=transforms.ToTensor()
 )
 
-dataloader = DataLoader(
-    dataset,
-    batch_size=batch_size,
-    shuffle=True,
-    drop_last=True
-)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
 sample_x, _ = next(iter(dataloader))
 n_classes = len(torch.unique(dataset.targets))
@@ -45,7 +37,7 @@ class Discriminator(nn.Module):
             nn.Linear(512, 128),
             nn.ReLU(),
             nn.Linear(128, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
         self._eye = torch.eye(n_classes, device=device)  # 条件ベクトル生成用の単位行列
 
@@ -65,14 +57,12 @@ class Generator(nn.Module):
             self._linear(128, 256),
             self._linear(256, 512),
             nn.Linear(512, image_size),
-            nn.Sigmoid()  # 濃淡を0~1に
+            nn.Sigmoid(),  # 濃淡を0~1に
         )
 
     def _linear(self, input_size, output_size):
         return nn.Sequential(
-            nn.Linear(input_size, output_size),
-            nn.BatchNorm1d(output_size),
-            nn.ReLU()
+            nn.Linear(input_size, output_size), nn.BatchNorm1d(output_size), nn.ReLU()
         )
 
     def forward(self, x):
@@ -141,7 +131,7 @@ def train(netD, netG, optimD, optimG, n_epochs, write_interval=1):
             lossG.backward()  # 逆伝播
             optimG.step()  # パラメータ更新
 
-        print(f'{epoch:>3}epoch | lossD: {lossD:.4f}, lossG: {lossG:.4f}')
+        print(f"{epoch:>3}epoch | lossD: {lossD:.4f}, lossG: {lossG:.4f}")
 
 
 netD = Discriminator().to(device)
@@ -150,5 +140,5 @@ optimD = optim.Adam(netD.parameters(), lr=0.0002)
 optimG = optim.Adam(netG.parameters(), lr=0.0002)
 n_epochs = 30
 
-print('初期状態')
+print("初期状態")
 train(netD, netG, optimD, optimG, n_epochs)

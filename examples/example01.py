@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("../")
 import torch
 from torch import nn, optim
@@ -8,8 +9,8 @@ from ase.build import fcc111
 from cgan_generator.get_reaction_energy import get_reaction_energy
 import pandas as pd
 
-ATOMIC_NUMBERS = {"Ni": 28, "Ru": 44, "Rh": 45, "Pd": 46, "Pt": 78, "Au": 79}
-LATTICE_CONSTANTS = {"Ni": 3.52, "Ru": 2.71, "Rh": 3.80, "Pd": 3.89, "Pt": 3.92, "Au": 4.08}
+ATOMIC_NUMBER = {"Ni": 28, "Ru": 44, "Rh": 45, "Pd": 46, "Pt": 78, "Au": 79}
+LATTICECONST = {"Ni": 3.52, "Ru": 2.71, "Rh": 3.80, "Pd": 3.89, "Pt": 3.92, "Au": 4.08}
 VACUUM = 9.0
 SURF_SIZE = (3, 3, 4)
 
@@ -33,7 +34,10 @@ ratio = [0.7, 0.3]
 
 num_steps_dft = 60
 num_iteration = 3
-latticeconstant = LATTICE_CONSTANTS[possible_elements[0]]*ratio[0] + LATTICE_CONSTANTS[possible_elements[1]]*ratio[1]
+latticeconst = (
+    LATTICECONST[possible_elements[0]] * ratio[0]
+    + LATTICECONST[possible_elements[1]] * ratio[1]
+)
 
 method = "m3gnet"  # emt or m3gnet or chgnet
 reaction_type = "N2dissociation"  # "N2dissociation" or "O2dissociation"
@@ -50,14 +54,13 @@ def make_samples(atomic_numbers, e_acts):
     # Make descriptor-target pairs
     samples = []
     for atom_num, e_acts in zip(atomic_numbers, e_acts):
-        samples.append({
-            "atomic_numbers": atom_num,
-            "activation_energy": e_acts
-        })
+        samples.append({"atomic_numbers": atom_num, "activation_energy": e_acts})
 
     # --- Normalize atomic numbers
     # Get the maximum number of atomic numbers
-    max_of_max = np.max(np.array([np.max(samples[i]["atomic_numbers"]) for i in range(len(samples))]))
+    max_of_max = np.max(
+        np.array([np.max(samples[i]["atomic_numbers"]) for i in range(len(samples))])
+    )
     for sample in samples:
         sample["atomic_numbers_scaled"] = sample["atomic_numbers"] / max_of_max
 
@@ -80,6 +83,7 @@ class AtomicDataset(Dataset):
     """
     データセットクラス
     """
+
     def __init__(self, samples):
         self.samples = samples
 
@@ -88,8 +92,12 @@ class AtomicDataset(Dataset):
 
     def __getitem__(self, idx):
         # atomic_numbers を特徴ベクトルに
-        atomic_numbers_scaled = torch.tensor(self.samples[idx]["atomic_numbers_scaled"], dtype=torch.float32)
-        energy = torch.tensor(self.samples[idx]["activation_energy"], dtype=torch.float32)
+        atomic_numbers_scaled = torch.tensor(
+            self.samples[idx]["atomic_numbers_scaled"], dtype=torch.float32
+        )
+        energy = torch.tensor(
+            self.samples[idx]["activation_energy"], dtype=torch.float32
+        )
         rank = torch.tensor(self.samples[idx]["rank"], dtype=torch.long)
         return atomic_numbers_scaled, energy, rank
 
@@ -100,19 +108,16 @@ class Discriminator(nn.Module):
         self.image_size = image_size
         self.n_classes = n_classes
         self.net = nn.Sequential(
-
             nn.Linear(image_size + n_classes, 128),
             nn.BatchNorm1d(128),  # need
             nn.LeakyReLU(negative_slope=negative_slope),  # need
             nn.Dropout(p=dropoutrate),  # test
-
             nn.Linear(128, 128),
             nn.BatchNorm1d(128),  # need
             nn.LeakyReLU(negative_slope=negative_slope),  # need
             nn.Dropout(p=dropoutrate),  # test
-
             nn.Linear(128, 1),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x, labels, n_classes):
@@ -132,14 +137,12 @@ class Generator(nn.Module):
             nn.BatchNorm1d(128),  # need
             nn.LeakyReLU(negative_slope=negative_slope),  # need
             nn.Dropout(p=dropoutrate),  # test
-
             nn.Linear(128, 128),
             nn.BatchNorm1d(128),  # need
             nn.LeakyReLU(negative_slope=negative_slope),  # need
             nn.Dropout(p=dropoutrate),  # test
-
             nn.Linear(128, image_size),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, z):
@@ -151,7 +154,7 @@ def make_noise(labels, n_classes):
     labels_onehot = torch.eye(n_classes, device=device)[labels]
     labels_onehot = labels_onehot.repeat_interleave(nz // n_classes, dim=-1)
     z = torch.normal(0, noise_std, size=(len(labels), nz), device=device)
-    z = z + labels_onehot                              # (batch_size, nz)
+    z = z + labels_onehot  # (batch_size, nz)
     return z
 
 
@@ -161,7 +164,7 @@ def train(netD, netG, optimD, optimG, n_epochs, dataloader, n_classes):
     fake_labels = torch.zeros(batch_size, 1, device=device)
     netD.train()
     netG.train()
-    for epoch in range(1, n_epochs+1):
+    for epoch in range(1, n_epochs + 1):
         for atomic_numbers_scaled, _, ranks in dataloader:
             atomic_numbers_scaled = atomic_numbers_scaled.to(device)
             ranks = ranks.to(device)
@@ -169,8 +172,10 @@ def train(netD, netG, optimD, optimG, n_epochs, dataloader, n_classes):
             # --- Discriminator 学習 ---
             z = make_noise(ranks, n_classes)
             fake_data = netG(z)
-            pred_fake = netD(fake_data, ranks, n_classes=n_classes)       # 偽データ 判定
-            pred_real = netD(atomic_numbers_scaled, ranks, n_classes=n_classes)  # 本物データ 判定
+            pred_fake = netD(fake_data, ranks, n_classes=n_classes)  # 偽データ 判定
+            pred_real = netD(
+                atomic_numbers_scaled, ranks, n_classes=n_classes
+            )  # 本物データ 判定
 
             lossD_fake = criterion(pred_fake, fake_labels)
             lossD_real = criterion(pred_real, real_labels)
@@ -191,11 +196,13 @@ def train(netD, netG, optimD, optimG, n_epochs, dataloader, n_classes):
             optimG.step()
 
         if (epoch % 20) == 0:
-            print(f"Epoch [{epoch:3d}/{n_epochs:3d}] | LossD: {lossD.item():.4f} | LossG: {lossG.item():.4f}")
+            print(
+                f"Epoch [{epoch:3d}/{n_epochs:3d}] | LossD: {lossD.item():.4f} | LossG: {lossG.item():.4f}"
+            )
 
 
 def generate_samples(netG, rank, n_generate=10, n_classes=0):
-    labels = torch.tensor([rank]*n_generate, dtype=torch.long, device=device)
+    labels = torch.tensor([rank] * n_generate, dtype=torch.long, device=device)
     z = make_noise(labels, n_classes=n_classes)
     fake_samples = netG(z)
 
@@ -204,8 +211,8 @@ def generate_samples(netG, rank, n_generate=10, n_classes=0):
     fake_samples[fake_samples >= 0.5] = 1
 
     # 0-1 -> atomic number
-    fake_samples[fake_samples == 0] = ATOMIC_NUMBERS[possible_elements[0]]
-    fake_samples[fake_samples == 1] = ATOMIC_NUMBERS[possible_elements[1]]
+    fake_samples[fake_samples == 0] = ATOMIC_NUMBER[possible_elements[0]]
+    fake_samples[fake_samples == 1] = ATOMIC_NUMBER[possible_elements[1]]
 
     return fake_samples
 
@@ -213,11 +220,13 @@ def generate_samples(netG, rank, n_generate=10, n_classes=0):
 def add_activation_energy_to_dataframe(df, iteration, e_acts, formula_list):
     df_tmp = pd.DataFrame(columns=["iteration", "activation_energy", "formula"])
     for i, (e_act, formula) in enumerate(zip(e_acts, formula_list)):
-        new_row = pd.DataFrame({
-            "iteration": [iteration],
-            "activation_energy": [e_act],
-            "formula": [formula]
-        })
+        new_row = pd.DataFrame(
+            {
+                "iteration": [iteration],
+                "activation_energy": [e_act],
+                "formula": [formula],
+            }
+        )
         df_tmp = pd.concat([df_tmp, new_row], ignore_index=True)
 
     df_tmp = df_tmp.sort_values(by="activation_energy", ascending=False)
@@ -231,18 +240,20 @@ def make_barplot(df):
 
     import plotly.express as px
 
-    fig = px.bar(df,
-                 x=df.index,
-                 y="activation_energy",
-                 color="iteration",
-                 barmode="group",
-                 hover_data=["formula"],
-                 labels={
-                     "index": "Sample Index",
-                     "activation_energy": "Activation Energy (eV)",
-                     "iteration": "Iteration"
-                 },
-                 title="Activation Energies by Iteration")
+    fig = px.bar(
+        df,
+        x=df.index,
+        y="activation_energy",
+        color="iteration",
+        barmode="group",
+        hover_data=["formula"],
+        labels={
+            "index": "Sample Index",
+            "activation_energy": "Activation Energy (eV)",
+            "iteration": "Iteration",
+        },
+        title="Activation Energies by Iteration",
+    )
 
     # Update layout for better appearance
     fig.update_layout(
@@ -250,7 +261,7 @@ def make_barplot(df):
         showlegend=True,
         legend_title_text="Iteration",
         xaxis_gridcolor="lightgray",
-        yaxis_gridcolor="lightgray"
+        yaxis_gridcolor="lightgray",
     )
 
     # Show the plot
@@ -263,7 +274,9 @@ def make_barplot(df):
 def train_and_generate(samples=None):
     # Step 4. Put above dataset and train the CGAN.
     dataset = AtomicDataset(samples)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    dataloader = DataLoader(
+        dataset, batch_size=batch_size, shuffle=True, drop_last=True
+    )
 
     sample_x, sample_energy, sample_rank = next(iter(dataloader))
     n_classes = len(torch.unique(torch.tensor([sample["rank"] for sample in samples])))
@@ -273,10 +286,14 @@ def train_and_generate(samples=None):
     netG = Generator(image_size=image_size, n_classes=n_classes).to(device)
     optimD = optim.Adam(netD.parameters(), lr=lr)
     optimG = optim.Adam(netG.parameters(), lr=lr)
-    train(netD, netG, optimD, optimG, n_epochs, dataloader=dataloader, n_classes=n_classes)
+    train(
+        netD, netG, optimD, optimG, n_epochs, dataloader=dataloader, n_classes=n_classes
+    )
 
-    # Step 5. Generate fake-samples for "rank=1" surfaces, to generate the surfaces with lower activation energy.
-    generated = generate_samples(netG, rank_to_generate, n_generate=n_generate, n_classes=n_classes)
+    # Generate fake-samples for "rank=1" surfaces, to generate the surfaces with lower activation energy.
+    generated = generate_samples(
+        netG, rank_to_generate, n_generate=n_generate, n_classes=n_classes
+    )
     generated = generated.detach().numpy()
 
     return generated
@@ -293,11 +310,18 @@ if __name__ == "__main__":
     formula_list = []
 
     for isurf in range(num_samples):
-        surf = fcc111("Au", size=SURF_SIZE, a=latticeconstant, vacuum=VACUUM)  # element is dummy
+        surf = fcc111(
+            "Au", size=SURF_SIZE, a=latticeconst, vacuum=VACUUM
+        )  # element is dummy
         surf.pbc = True
         symbols = np.random.choice(possible_elements, len(surf), p=ratio)
         surf.set_chemical_symbols(symbols)
-        e_rxn = get_reaction_energy(surface=surf, method=method, steps=num_steps_dft, reaction_type=reaction_type)
+        e_rxn = get_reaction_energy(
+            surface=surf,
+            method=method,
+            steps=num_steps_dft,
+            reaction_type=reaction_type,
+        )
         atomic_numbers.append(surf.get_atomic_numbers())
         formula_list.append(surf.get_chemical_formula())
         e_rxns.append(e_rxn)
@@ -305,11 +329,19 @@ if __name__ == "__main__":
     e_acts = alpha * np.array(e_rxns) + beta
 
     df = pd.DataFrame(columns=["iteration", "activation_energy", "formula"])
-    df = add_activation_energy_to_dataframe(df, iteration=0, e_acts=e_acts, formula_list=formula_list)
+    df = add_activation_energy_to_dataframe(
+        df, iteration=0, e_acts=e_acts, formula_list=formula_list
+    )
 
-    samples = make_samples(atomic_numbers, e_acts)  # setting atomic numbers as descriptors and e_acts as target.
-    samples = assign_rank(samples)  # Assign the smallest activation energy surfaces as "rank=0".
-    generated = train_and_generate(samples=samples)  # train GAN and generate fake samples
+    samples = make_samples(
+        atomic_numbers, e_acts
+    )  # atomic numbers - descriptors, e_acts - target.
+    samples = assign_rank(
+        samples
+    )  # Assign the smallest activation energy surfaces as "rank=0".
+    generated = train_and_generate(
+        samples=samples
+    )  # train GAN and generate fake samples
 
     # ---  Next iteration
     for i in range(num_iteration):
@@ -319,21 +351,34 @@ if __name__ == "__main__":
         atomic_numbers = []
         formula_list = []
         for isurf in generated:
-            surf = fcc111("Au", size=SURF_SIZE, a=latticeconstant, vacuum=VACUUM)  # element is dummy
+            surf = fcc111(
+                "Au", size=SURF_SIZE, a=latticeconst, vacuum=VACUUM
+            )  # element is dummy
             surf.pbc = True
             surf.set_chemical_symbols(isurf)
-            e_rxn = get_reaction_energy(surface=surf, method=method, steps=num_steps_dft, reaction_type=reaction_type)
+            e_rxn = get_reaction_energy(
+                surface=surf,
+                method=method,
+                steps=num_steps_dft,
+                reaction_type=reaction_type,
+            )
             atomic_numbers.append(surf.get_atomic_numbers())
             formula_list.append(surf.get_chemical_formula())
             e_rxns.append(e_rxn)
 
         e_acts = alpha * np.array(e_rxns) + beta
 
-        df = add_activation_energy_to_dataframe(df, iteration=i+1, e_acts=e_acts, formula_list=formula_list)
+        df = add_activation_energy_to_dataframe(
+            df, iteration=i + 1, e_acts=e_acts, formula_list=formula_list
+        )
 
-        newsamples = make_samples(atomic_numbers, e_acts)  # setting atomic numbers as descriptors and e_acts as target.
+        newsamples = make_samples(
+            atomic_numbers, e_acts
+        )  # atomic numbers - descriptors, e_acts - target
         samples += newsamples
-        samples = assign_rank(samples)  # Assign the smallest activation energy surfaces as "rank=0".
+        samples = assign_rank(
+            samples
+        )  # Assign the smallest activation energy surfaces as "rank=0".
 
         generated = train_and_generate(samples=samples)
 

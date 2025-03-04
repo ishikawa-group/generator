@@ -1,4 +1,6 @@
-def get_reaction_energy(surface=None, method="emt", steps=10, reaction_type="N2dissociation"):
+def get_reaction_energy(
+    surface=None, method="emt", steps=10, reaction_type="N2dissociation"
+):
     """
     Calculate the reaction energy of N2 dissociative adsorption on surface (N2 + 2*surf -> 2N*).
     M3GNet or CHGNet can be used.
@@ -15,6 +17,7 @@ def get_reaction_energy(surface=None, method="emt", steps=10, reaction_type="N2d
     import matgl
     from ase import Atom, Atoms
     from ase.build import add_adsorbate
+
     # from ase.visualize import view
     from ase.optimize import FIRE, FIRE2
     from ase.calculators.emt import EMT
@@ -67,7 +70,7 @@ def get_reaction_energy(surface=None, method="emt", steps=10, reaction_type="N2d
         raise ValueError("Invalid method.")
 
     # --- optimization -- FIRE2 fail?
-    opt_mol  = FIRE(mol, maxstep=0.2, trajectory="mol.traj")
+    opt_mol = FIRE(mol, maxstep=0.2, trajectory="mol.traj")
     opt_bare = FIRE(bare_surf, maxstep=0.2, trajectory="bare_surf.traj")
     opt_surf = FIRE(surf, maxstep=0.2, trajectory="surf.traj")
 
@@ -79,7 +82,7 @@ def get_reaction_energy(surface=None, method="emt", steps=10, reaction_type="N2d
     e_bare_surf = bare_surf.get_potential_energy()
     e_surf = surf.get_potential_energy()
 
-    e_reac = 2.0*e_surf - (e_mol + 2.0*e_bare_surf)
+    e_reac = 2.0 * e_surf - (e_mol + 2.0 * e_bare_surf)
 
     if reaction_type == "N2dissociation":
         print(f"Reaction energy of N2 + 2surf -> 2N* :{e_reac} eV")
