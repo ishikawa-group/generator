@@ -31,6 +31,17 @@ print("num classes:", n_classes)
 
 
 class Discriminator(nn.Module):
+    """Conditional Discriminator network for CGAN.
+
+    This network determines whether an input image is real or fake, considering
+    the conditional label information. It consists of convolutional layers for
+    feature extraction and fully connected layers for classification.
+
+    Attributes:
+        conv: Convolutional layers for feature extraction
+        fc: Fully connected layers for classification
+        _eye: Identity matrix for one-hot encoding of labels
+    """
     def __init__(self):
         super().__init__()
         self.conv = nn.Sequential(
@@ -48,6 +59,18 @@ class Discriminator(nn.Module):
         self._eye = torch.eye(n_classes, device=device)  # 条件ベクトル生成用の単位行列
 
     def _conv_layer(self, in_channels, out_channels, kernel_size, stride, padding):
+        """Create a convolutional layer with batch normalization and ReLU activation.
+
+        Args:
+            in_channels (int): Number of input channels
+            out_channels (int): Number of output channels
+            kernel_size (int): Size of the convolving kernel
+            stride (int): Stride of the convolution
+            padding (int): Padding added to all sides of the input
+
+        Returns:
+            nn.Sequential: A sequential container of Conv2d, BatchNorm2d, and ReLU
+        """
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding),
             nn.BatchNorm2d(out_channels),
@@ -55,6 +78,15 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, x, labels):
+        """Forward pass of the discriminator.
+
+        Args:
+            x (torch.Tensor): Input images
+            labels (torch.Tensor): Class labels for the conditional input
+
+        Returns:
+            torch.Tensor: Probability that the input is real (1) or fake (0)
+        """
         x = self.conv(x)  # 特徴抽出
         labels = self._eye[labels]  # 条件(ラベル)をone-hotベクトルに
         x = torch.cat([x, labels], dim=1)  # 画像と条件を結合
@@ -63,6 +95,15 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
+    """Conditional Generator network for CGAN.
+
+    This network generates fake images based on random noise and conditional
+    information. It uses transposed convolution layers to upsample the input
+    noise into an image.
+
+    Attributes:
+        net: Sequential container of transposed convolution layers
+    """
     def __init__(self):
         super().__init__()
         self.net = nn.Sequential(
@@ -74,6 +115,18 @@ class Generator(nn.Module):
         )
 
     def _convT(self, in_channels, out_channels, kernel_size, stride, padding):
+        """Create a transposed convolutional layer with batch normalization and ReLU activation.
+
+        Args:
+            in_channels (int): Number of input channels
+            out_channels (int): Number of output channels
+            kernel_size (int): Size of the convolving kernel
+            stride (int): Stride of the convolution
+            padding (int): Padding added to all sides of the input
+
+        Returns:
+            nn.Sequential: A sequential container of ConvTranspose2d, BatchNorm2d, and ReLU
+        """
         return nn.Sequential(
             nn.ConvTranspose2d(in_channels, out_channels, kernel_size, stride, padding),
             nn.BatchNorm2d(out_channels),
@@ -81,6 +134,14 @@ class Generator(nn.Module):
         )
 
     def forward(self, x):
+        """Forward pass of the generator.
+
+        Args:
+            x (torch.Tensor): Input noise tensor
+
+        Returns:
+            torch.Tensor: Generated image
+        """
         x = x.view(-1, nz, 1, 1)
         y = self.net(x)
         return y
@@ -90,6 +151,14 @@ eye = torch.eye(n_classes, device=device)
 
 
 def make_noise(labels):
+    """Generate noise vectors with conditional information.
+
+    Args:
+        labels (torch.Tensor): Class labels to condition the noise on
+
+    Returns:
+        torch.Tensor: Noise vectors with embedded conditional information
+    """
     labels = eye[labels]
     labels = labels.repeat_interleave(nz // n_classes, dim=-1)
     z = torch.normal(0, noise_std, size=(len(labels), nz), device=device)
@@ -99,6 +168,16 @@ def make_noise(labels):
 
 # 画像描画
 def write(netG, n_rows=1, size=64):
+    """Generate and display a grid of images using the generator.
+
+    Args:
+        netG (Generator): The generator network
+        n_rows (int, optional): Number of rows in the output grid. Defaults to 1.
+        size (int, optional): Size of each output image. Defaults to 64.
+
+    Returns:
+        numpy.ndarray: Grid of generated images in numpy array format
+    """
     n_images = n_rows * n_classes
     z = make_noise(torch.tensor(list(range(n_classes)) * n_rows))
     images = netG(z)
@@ -109,6 +188,14 @@ def write(netG, n_rows=1, size=64):
 
 # 間違ったラベルの生成
 def make_false_labels(labels):
+    """Generate incorrect labels for training the discriminator.
+
+    Args:
+        labels (torch.Tensor): Original class labels
+
+    Returns:
+        torch.Tensor: Modified labels that are different from the input labels
+    """
     diff = torch.randint(1, n_classes, size=labels.size(), device=device)
     fake_labels = (labels + diff) % n_classes
     return fake_labels
@@ -120,6 +207,16 @@ criterion = nn.BCELoss()
 
 
 def train(netD, netG, optimD, optimG, n_epochs, write_interval=1):
+    """Train the CGAN model.
+
+    Args:
+        netD (Discriminator): The discriminator network
+        netG (Generator): The generator network
+        optimD (torch.optim.Optimizer): Optimizer for the discriminator
+        optimG (torch.optim.Optimizer): Optimizer for the generator
+        n_epochs (int): Number of training epochs
+        write_interval (int, optional): Interval for generating sample images. Defaults to 1.
+    """
     # 学習モード
     netD.train()
     netG.train()
@@ -175,6 +272,14 @@ import matplotlib.pyplot as plt
 
 
 def write_from_label(netG, label, n_images=10, size=64):
+    """Generate and display images from a specific label using the generator.
+
+    Args:
+        netG (Generator): The generator network
+        label (list): Label vector to condition the generation
+        n_images (int, optional): Number of images to generate. Defaults to 10.
+        size (int, optional): Size of each output image. Defaults to 64.
+    """
     labels = torch.tensor([label] * n_images).to(device)
     labels = labels.repeat_interleave(nz // n_classes, dim=-1)
     z = torch.normal(0, noise_std, size=(len(labels), nz), device=device)
