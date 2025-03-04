@@ -13,17 +13,11 @@ def cgan():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device
     dataset = MNIST(
-        root="datasets/",
-        train=True,
-        download=True,
-        transform=transforms.ToTensor()
+        root="datasets/", train=True, download=True, transform=transforms.ToTensor()
     )
 
     dataloader = DataLoader(
-        dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        drop_last=True
+        dataset, batch_size=batch_size, shuffle=True, drop_last=True
     )
 
     sample_x, _ = next(iter(dataloader))
@@ -45,17 +39,19 @@ def cgan():
                 nn.Linear(512, 128),
                 nn.ReLU(),
                 nn.Linear(128, 1),
-                nn.Sigmoid()
+                nn.Sigmoid(),
             )
-            self._eye = torch.eye(n_classes, device=device) # 条件ベクトル生成用の単位行列
+            self._eye = torch.eye(
+                n_classes, device=device
+            )  # 条件ベクトル生成用の単位行列
 
         def forward(self, x, labels):
-            labels = self._eye[labels] # 条件(ラベル)をone-hotベクトルに
-            x = x.view(batch_size, -1) # 画像を1次元に
-            x = torch.cat([x, labels], dim=1) # 画像と条件を結合
+            labels = self._eye[labels]  # 条件(ラベル)をone-hotベクトルに
+            x = x.view(batch_size, -1)  # 画像を1次元に
+            x = torch.cat([x, labels], dim=1)  # 画像と条件を結合
             y = self.net(x)
             return y
-        
+
     class Generator(nn.Module):
         def __init__(self):
             super().__init__()
@@ -64,30 +60,30 @@ def cgan():
                 self._linear(128, 256),
                 self._linear(256, 512),
                 nn.Linear(512, image_size),
-                nn.Sigmoid() # 濃淡を0~1に
+                nn.Sigmoid(),  # 濃淡を0~1に
             )
 
         def _linear(self, input_size, output_size):
             return nn.Sequential(
                 nn.Linear(input_size, output_size),
                 nn.BatchNorm1d(output_size),
-                nn.ReLU()
+                nn.ReLU(),
             )
 
         def forward(self, x):
             x = x.view(-1, nz)
             y = self.net(x)
-            y = y.view(-1, 1, w, h) # 784 -> 1x28x28
+            y = y.view(-1, 1, w, h)  # 784 -> 1x28x28
             return y
-        
+
     eye = torch.eye(n_classes, device=device)
+
     def make_noise(labels):
         labels = eye[labels]
         labels = labels.repeat_interleave(nz // n_classes, dim=-1)
         z = torch.normal(0, noise_std, size=(len(labels), nz), device=device)
         z = z + labels
         return z
-
 
     # 画像描画
     def write(netG, n_rows=1, size=64):
@@ -98,7 +94,7 @@ def cgan():
         img = torchvision.utils.make_grid(images, n_images // n_rows)
         img = img.permute(1, 2, 0).cpu().numpy()  # 画像を表示可能な形式に変換
         plt.imshow(img)
-        plt.axis('off')
+        plt.axis("off")
         plt.show()
 
     # 間違ったラベルの生成
@@ -116,38 +112,38 @@ def cgan():
         netD.train()
         netG.train()
 
-        for epoch in range(1, n_epochs+1):
+        for epoch in range(1, n_epochs + 1):
             for X, labels in dataloader:
-                X = X.to(device) # 本物の画像
-                labels = labels.to(device) # 正しいラベル
-                false_labels = make_false_labels(labels) # 間違ったラベル
+                X = X.to(device)  # 本物の画像
+                labels = labels.to(device)  # 正しいラベル
+                false_labels = make_false_labels(labels)  # 間違ったラベル
 
                 # 勾配をリセット
                 optimD.zero_grad()
                 optimG.zero_grad()
 
                 # Discriminatorの学習
-                z = make_noise(labels) # ノイズを生成
-                fake = netG(z) # 偽物を生成
-                pred_fake = netD(fake, labels) # 偽物を判定
-                pred_real_true = netD(X, labels) # 本物&正しいラベルを判定
-                pred_real_false = netD(X, false_labels) # 本物&間違ったラベルを判定
+                z = make_noise(labels)  # ノイズを生成
+                fake = netG(z)  # 偽物を生成
+                pred_fake = netD(fake, labels)  # 偽物を判定
+                pred_real_true = netD(X, labels)  # 本物&正しいラベルを判定
+                pred_real_false = netD(X, false_labels)  # 本物&間違ったラベルを判定
                 # 誤差を計算
                 loss_fake = criterion(pred_fake, fake_labels)
                 loss_real_true = criterion(pred_real_true, real_labels)
                 loss_real_false = criterion(pred_real_false, fake_labels)
                 lossD = loss_fake + loss_real_true + loss_real_false
-                lossD.backward() # 逆伝播
-                optimD.step() # パラメータ更新
+                lossD.backward()  # 逆伝播
+                optimD.step()  # パラメータ更新
 
                 # Generatorの学習
-                fake = netG(z) # 偽物を生成
-                pred = netD(fake, labels) # 偽物を判定
-                lossG = criterion(pred, real_labels) # 誤差を計算
-                lossG.backward() # 逆伝播
-                optimG.step() # パラメータ更新
+                fake = netG(z)  # 偽物を生成
+                pred = netD(fake, labels)  # 偽物を判定
+                lossG = criterion(pred, real_labels)  # 誤差を計算
+                lossG.backward()  # 逆伝播
+                optimG.step()  # パラメータ更新
 
-            print(f'{epoch:>3}epoch | lossD: {lossD:.4f}, lossG: {lossG:.4f}')
+            print(f"{epoch:>3}epoch | lossD: {lossD:.4f}, lossG: {lossG:.4f}")
             if write_interval and epoch % write_interval == 0:
                 write(netG)
 
@@ -157,7 +153,7 @@ def cgan():
     optimG = optim.Adam(netG.parameters(), lr=0.0002)
     n_epochs = 30
 
-    print('初期状態')
+    print("初期状態")
     write(netG)
     train(netD, netG, optimD, optimG, n_epochs)
 
