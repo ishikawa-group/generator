@@ -1,0 +1,15 @@
+[build-system]
+requires      = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name             = "generator"
+version          = "0.1.0"
+description      = "CGAN utilities for materials generation"
+readme           = "README.md"
+requires-python  = ">=3.10"
+
+[tool.setuptools.packages.find]
+# リポジトリルート("."）から generator とその下層すべてを含める
+where   = ["."]
+include = ["generator", "generator.*"]
