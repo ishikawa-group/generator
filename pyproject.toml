@@ -9,6 +9,8 @@ description     = "CGAN utilities for materials generation"
 readme          = "README.md"
 requires-python = ">=3.10"
 
-[tool.setuptools.packages.find]
-where   = ["generator"]
-include = ["generator*"]
+ [tool.setuptools.packages.find]
+-where   = ["generator"]
+-include = ["generator*"]
++where   = ["."]
++include = ["generator", "generator.*"]
