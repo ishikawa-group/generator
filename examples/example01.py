@@ -1,6 +1,3 @@
-import sys
-
-sys.path.append("../")
 import torch
 from torch import nn, optim
 from torch.utils.data import Dataset, DataLoader
@@ -8,6 +5,8 @@ import numpy as np
 from ase.build import fcc111
 from cgan_generator.get_reaction_energy import get_reaction_energy
 import pandas as pd
+import sys
+sys.path.append("../")
 
 ATOMIC_NUMBER = {"Ni": 28, "Ru": 44, "Rh": 45, "Pd": 46, "Pt": 78, "Au": 79}
 LATTICECONST = {"Ni": 3.52, "Ru": 2.71, "Rh": 3.80, "Pd": 3.89, "Pt": 3.92, "Au": 4.08}
