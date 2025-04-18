@@ -1,5 +1,3 @@
-from cgan_generator.cdcgan import fake_labels
-
 # Material Generator with Generative AI
 ## cgan_generator
 * **cgan_generator** proposes artificial materials based on the trained neural networks, using a conditional generative adversarial network (CGAN).
