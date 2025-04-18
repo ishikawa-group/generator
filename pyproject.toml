@@ -3,6 +3,6 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "my_library"
+name = "generator"
 version = "0.0.1"
 dependencies = ["numpy==2.2.3"]
