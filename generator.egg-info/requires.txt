@@ -1,8 +1,0 @@
-torch>=2.3.0
-pytorch-lightning>=2.5.0
-numpy>=2.2.0
-pandas>=2.2.0
-ase>=3.24.0
-dgl>=2.2.1
-pymatgen>=2025.2.18
-matplotlib>=3.10.0
