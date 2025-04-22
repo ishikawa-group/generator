@@ -18,6 +18,14 @@ pip install .
 * PyMatGen >= 2025.2.18
 * Other dependencies are automatically installed
 
+## Test code
+```python
+from generator.cgan_generator import gazouno_cgan
+
+target_figure = "3"
+gazouno_cgan(target_figure)  # -> "3"の手描き文字の画像が生成される
+```
+
 ## Usage
 ```python
 from ase.build import fcc111
